@@ -6,7 +6,6 @@
 # Variables
 $resourceGroup = "rg-azurepolicy-demo"
 $location = "westeurope"
-$funcAppIPRestrictions = "funcapp-ip-restrictions"
 
 # Login to Azure
 Login-AzAccount
@@ -28,6 +27,11 @@ Get-AzPolicyAlias | Select-Object -ExpandProperty "Aliases" | Where-Object { $_.
 $resourceGroup = New-AzResourceGroup -Name $resourceGroup -Location $location -Force
 $resourceGroup
 
+##############################################
+# Azure Functions App and IP Restriction demo
+##############################################
+$funcAppIPRestrictions = "funcapp-ip-restrictions"
+
 # Create policy definition
 $funcAppIPRestrictionsDefinition = New-AzPolicyDefinition `
     -Name $funcAppIPRestrictions `
@@ -36,8 +40,8 @@ $funcAppIPRestrictionsDefinition = New-AzPolicyDefinition `
 $funcAppIPRestrictionsDefinition
 
 # Create policy assignment to resource group
-$assignment = New-AzPolicyAssignment `
-    -Name ipRestrictions `
+$funcAppIPRestrictionsAssignment = New-AzPolicyAssignment `
+    -Name $funcAppIPRestrictions `
     -PolicyDefinition $funcAppIPRestrictionsDefinition `
     -Scope $resourceGroup.ResourceId -AssignIdentity -Location $location
 
@@ -46,18 +50,62 @@ $assignment = New-AzPolicyAssignment `
 # Note: If this below fails:
 # "New-AzRoleAssignment: Principal 07b0c7d2-2370-4299-a018-0c99d80dcafedoes not exist in the directory cb417fc7-167f-4c45-b909-b5aecd19421c."
 #       then you need to wait a bit and re-try.
-New-AzRoleAssignment -ResourceGroupName $resourceGroup.ResourceGroupName -RoleDefinitionName "Website Contributor" -ObjectId $assignment.Identity.PrincipalId
+New-AzRoleAssignment -ResourceGroupName $resourceGroup.ResourceGroupName -RoleDefinitionName "Website Contributor" -ObjectId $funcAppIPRestrictionsAssignment.Identity.PrincipalId
 
 # Create Azure Functions App
 $funcStorage = "funcapps00000010"
 $funcApp = "funcapps00000010"
-#New-AzStorageAccount -ResourceGroupName $resourceGroup.ResourceGroupName -Name $funcStorage -SkuName Standard_LRS -Location $location
+New-AzStorageAccount -ResourceGroupName $resourceGroup.ResourceGroupName -Name $funcStorage -SkuName Standard_LRS -Location $location
 New-AzFunctionApp -Name $funcApp -ResourceGroupName $resourceGroup.ResourceGroupName -StorageAccount $funcStorage -Runtime DotNet -RuntimeVersion 3 -FunctionsVersion 3 -OSType Windows -DisableApplicationInsights -Location $location
 
 # Delete Functions App (in case you want to re-run the deployments)
 Remove-AzFunctionApp -Name $funcApp -ResourceGroupName $resourceGroup.ResourceGroupName -Force
 
-# Wipe out the resources
-Remove-AzPolicyAssignment -Name ipRestrictions -Scope $resourceGroup.ResourceId
+# Wipe out the Functions related policy resources
+Remove-AzPolicyAssignment -Name $funcAppIPRestrictions -Scope $resourceGroup.ResourceId
 Remove-AzPolicyDefinition -Name $funcAppIPRestrictions -Force
+
+# Wipe out Functions storage account
+Remove-AzStorageAccount -ResourceGroupName $resourceGroup.ResourceGroupName -Name $funcStorage -Force
+
+##############################################
+# Azure Storage Account and encryption demo
+##############################################
+$storageDisableSharedKeys = "storage-disable-shared-keys"
+
+# Create policy definition
+$storageDisableSharedKeysDefinition = New-AzPolicyDefinition `
+    -Name $storageDisableSharedKeys `
+    -Policy .\policies\disable_shared_key_access_in_storage.json `
+    -Verbose
+$storageDisableSharedKeysDefinition
+
+# Create policy assignment to resource group
+$storageDisableShareKeysAssignment = New-AzPolicyAssignment `
+    -Name $storageDisableSharedKeys `
+    -PolicyDefinition $storageDisableSharedKeysDefinition `
+    -Scope $resourceGroup.ResourceId -AssignIdentity -Location $location
+
+# https://docs.microsoft.com/en-us/azure/role-based-access-control/built-in-roles#storage-account-contributor
+# $storageDisableShareKeysAssignment.Properties.policyRule.then.details.roleDefinitionIds[0]
+# Note: If this below fails:
+# "New-AzRoleAssignment: Principal 07b0c7d2-2370-4299-a018-0c99d80dcafedoes not exist in the directory cb417fc7-167f-4c45-b909-b5aecd19421c."
+#       then you need to wait a bit and re-try.
+New-AzRoleAssignment -ResourceGroupName $resourceGroup.ResourceGroupName -RoleDefinitionName "Storage Account Contributor" -ObjectId $storageDisableShareKeysAssignment.Identity.PrincipalId
+
+# Create Azure Storage Account
+$storage = "storageapps00000010"
+New-AzStorageAccount -ResourceGroupName $resourceGroup.ResourceGroupName -Name $storage -SkuName Standard_LRS -Location $location
+
+# Validate storage account in portal by going into "Access keys". You should see this text:
+# "Authorization with Shared Key is disabled for this account. Any requests that are authorized with Shared Key, including shared access signatures (SAS), will be denied."
+
+# Wipe out storage account
+Remove-AzStorageAccount -ResourceGroupName $resourceGroup.ResourceGroupName -Name $storage -Force
+
+# Wipe out the storage related policy resources
+Remove-AzPolicyAssignment -Name $storageDisableSharedKeys -Scope $resourceGroup.ResourceId
+Remove-AzPolicyDefinition -Name $storageDisableSharedKeys -Force
+
+# Wipe out the resources
 Remove-AzResourceGroup -Name $resourceGroup.ResourceGroupName -Force
