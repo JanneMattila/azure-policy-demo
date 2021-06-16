@@ -17,7 +17,12 @@ Select-AzSubscription -Subscription AzureDev
 # Show current context
 Get-AzSubscription
 
-Get-AzPolicyAlias | Select-Object -ExpandProperty 'Aliases' | Where-Object { $_.DefaultMetadata.Attributes -eq 'Modifiable' } | Format-Table
+# Aliases: https://docs.microsoft.com/en-us/azure/governance/policy/concepts/definition-structure#aliases
+# See aliases that support "modify"
+Get-AzPolicyAlias | Select-Object -ExpandProperty "Aliases" | Where-Object { $_.DefaultMetadata.Attributes -eq "Modifiable" } | Format-Table
+
+# Get aliases of "Microsoft.Web/sites"
+(Get-AzPolicyAlias -NamespaceMatch "Microsoft.Web" -ResourceTypeMatch "sites").Aliases | Format-Table
 
 # Create new resource group
 $resourceGroup = New-AzResourceGroup -Name $resourceGroup -Location $location -Force
@@ -26,7 +31,7 @@ $resourceGroup
 # Create policy definition
 $funcAppIPRestrictionsDefinition = New-AzPolicyDefinition `
     -Name $funcAppIPRestrictions `
-    -Policy .\policies\add_inbound_ip_filter_to_functionapp2.json `
+    -Policy .\policies\add_inbound_ip_filter_to_functionapp.json `
     -Verbose
 $funcAppIPRestrictionsDefinition
 

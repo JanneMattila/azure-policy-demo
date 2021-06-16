@@ -7,7 +7,31 @@
             "version": "1.0.0",
             "category": "Security"
         },
-        "parameters": {},
+        "parameters": {
+            "allowedIPAddresses": {
+                "type": "Array",
+                "metadata": {
+                    "description": "The list of IP Security rules to apply to Function Apps",
+                    "displayName": "Allowed IP addresses"
+                },
+                "defaultValue": [
+                    {
+                        "ipAddress": "1.2.3.4/32",
+                        "action": "Allow",
+                        "tag": "Default",
+                        "priority": 100,
+                        "name": "Allowed app 1"
+                    },
+                    {
+                        "ipAddress": "11.12.13.14/32",
+                        "action": "Allow",
+                        "tag": "Default",
+                        "priority": 101,
+                        "name": "Allowed app 2"
+                    }
+                ]
+            }
+        },
         "policyRule": {
             "if": {
                 "allOf": [
@@ -43,6 +67,9 @@
                             "parameters": {
                                 "name": {
                                     "value": "[field('name')]"
+                                },
+                                "allowedIPAddresses": {
+                                    "value": "[parameters('allowedIPAddresses')]"
                                 }
                             },
                             "template": {
@@ -51,31 +78,19 @@
                                 "parameters": {
                                     "name": {
                                         "type": "string"
+                                    },
+                                    "allowedIPAddresses": {
+                                        "type": "array"
                                     }
                                 },
                                 "resources": [
                                     {
                                         "name": "[concat(parameters('name'), '/web')]",
                                         "type": "Microsoft.Web/sites/config",
-                                        "apiVersion": "2018-11-01",
+                                        "apiVersion": "2020-12-01",
                                         "properties": {
                                             "scmIpSecurityRestrictionsUseMain": true,
-                                            "ipSecurityRestrictions": [
-                                                {
-                                                    "IpAddress": "1.2.3.4/32",
-                                                    "action": "Allow",
-                                                    "tag": "Default",
-                                                    "priority": 100,
-                                                    "name": "Allowed app 1"
-                                                },
-                                                {
-                                                    "IpAddress": "11.12.13.14/32",
-                                                    "action": "Allow",
-                                                    "tag": "Default",
-                                                    "priority": 101,
-                                                    "name": "Allowed app 2"
-                                                }
-                                            ]
+                                            "ipSecurityRestrictions": "[parameters('allowedIPAddresses')]"
                                         }
                                     }
                                 ]
