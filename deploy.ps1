@@ -112,5 +112,34 @@ Remove-AzStorageAccount -ResourceGroupName $resourceGroup.ResourceGroupName -Nam
 Remove-AzPolicyAssignment -Name $storageDisableSharedKeys -Scope $resourceGroup.ResourceId
 Remove-AzPolicyDefinition -Name $storageDisableSharedKeys -Force
 
+########################
+# Deny by location demo
+########################
+$denyByLocation = "deny-by-location"
+
+# Create policy definition
+$denyByLocationDefinition = New-AzPolicyDefinition `
+    -Name $denyByLocation `
+    -Policy .\policies\deny_by_location.json `
+    -Verbose
+$denyByLocationDefinition
+
+# Create policy assignment to resource group
+New-AzPolicyAssignment `
+    -Name $denyByLocation `
+    -PolicyDefinition $denyByLocationDefinition `
+    -Scope $resourceGroup.ResourceId
+
+# Create Azure Storage Account
+$storageDenied = "storageapps00000011"
+New-AzStorageAccount -ResourceGroupName $resourceGroup.ResourceGroupName -Name $storageDenied -SkuName Standard_LRS -Location "eastasia"
+
+# Wipe out storage account
+Remove-AzStorageAccount -ResourceGroupName $resourceGroup.ResourceGroupName -Name $storageDenied -Force
+
+# Wipe out the storage related policy resources
+Remove-AzPolicyAssignment -Name $denyByLocation -Scope $resourceGroup.ResourceId
+Remove-AzPolicyDefinition -Name $denyByLocation -Force
+
 # Wipe out the resources
 Remove-AzResourceGroup -Name $resourceGroup.ResourceGroupName -Force
