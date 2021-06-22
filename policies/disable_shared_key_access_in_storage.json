@@ -19,11 +19,11 @@
                         "anyOf": [
                             {
                                 "field": "Microsoft.Storage/storageAccounts/allowSharedKeyAccess",
-                                "notEquals": true
+                                "equals": true
                             },
                             {
                                 "field": "Microsoft.Storage/storageAccounts/allowSharedKeyAccess",
-                                "equals": ""
+                                "exists": false
                             }
                         ]
                     }

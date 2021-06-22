@@ -27,6 +27,11 @@ Get-AzPolicyAlias | Select-Object -ExpandProperty "Aliases" | Where-Object { $_.
 $resourceGroup = New-AzResourceGroup -Name $resourceGroup -Location $location -Force
 $resourceGroup
 
+# Note: You can trigger a policy compliance evaluation using this command
+$job = Start-AzPolicyComplianceScan -ResourceGroupName $resourceGroup.ResourceGroupName -AsJob
+$job
+$job | Wait-Job
+
 ##############################################
 # Azure Functions App and IP Restriction demo
 ##############################################
