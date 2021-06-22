@@ -73,9 +73,9 @@ Remove-AzPolicyDefinition -Name $funcAppIPRestrictions -Force
 # Wipe out Functions storage account
 Remove-AzStorageAccount -ResourceGroupName $resourceGroup.ResourceGroupName -Name $funcStorage -Force
 
-##############################################
-# Azure Storage Account and encryption demo
-##############################################
+#############################################
+# Azure Storage Account and shared keys demo
+#############################################
 $storageDisableSharedKeys = "storage-disable-shared-keys"
 
 # Create policy definition
@@ -125,14 +125,26 @@ $denyByLocationDefinition = New-AzPolicyDefinition `
 $denyByLocationDefinition
 
 # Create policy assignment to resource group
+$denyByLocationNonComplianceMessages = @(
+    @{
+        Message = "Policy to deny resource based on location. For more details see: https://bit.ly/AzurePolicyLink"; 
+    })
+
 New-AzPolicyAssignment `
     -Name $denyByLocation `
+    -DisplayName $denyByLocation `
     -PolicyDefinition $denyByLocationDefinition `
-    -Scope $resourceGroup.ResourceId
+    -Scope $resourceGroup.ResourceId `
+    -NonComplianceMessage $denyByLocationNonComplianceMessages # <- notice we'll provide link for more information
 
 # Create Azure Storage Account
 $storageDenied = "storageapps00000011"
 New-AzStorageAccount -ResourceGroupName $resourceGroup.ResourceGroupName -Name $storageDenied -SkuName Standard_LRS -Location "eastasia"
+
+# You should receive following error message:
+# "New-AzStorageAccount: Resource 'storageapps00000011' was disallowed by policy."
+# In portal:
+# "Policy to deny resource based on location. For more details see: https://bit.ly/AzurePolicyLink"
 
 # Wipe out storage account
 Remove-AzStorageAccount -ResourceGroupName $resourceGroup.ResourceGroupName -Name $storageDenied -Force
