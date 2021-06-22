@@ -139,10 +139,10 @@ New-AzPolicyAssignment `
 
 # Create Azure Storage Account
 $storageDenied = "storageapps00000011"
-New-AzStorageAccount -ResourceGroupName $resourceGroup.ResourceGroupName -Name $storageDenied -SkuName Standard_LRS -Location "eastasia"
+New-AzStorageAccount -ResourceGroupName $resourceGroup.ResourceGroupName -Name $storageDenied -SkuName Standard_LRS -Location "eastasia" -Verbose
 
 # You should receive following error message:
-# "New-AzStorageAccount: Resource 'storageapps00000011' was disallowed by policy."
+# "New-AzStorageAccount: Resource 'storageapps00000011' was disallowed by policy. Reasons: 'Policy to deny resource based on location. For more details see: https://bit.ly/AzurePolicyLink'. See error details for policy resource IDs."
 # In portal:
 # "Policy to deny resource based on location. For more details see: https://bit.ly/AzurePolicyLink"
 
