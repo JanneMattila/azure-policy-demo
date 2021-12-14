@@ -94,7 +94,7 @@ $storageDisableShareKeysAssignment = New-AzPolicyAssignment `
 # https://docs.microsoft.com/en-us/azure/role-based-access-control/built-in-roles#storage-account-contributor
 # $storageDisableShareKeysAssignment.Properties.policyRule.then.details.roleDefinitionIds[0]
 # Note: If this below fails:
-# "New-AzRoleAssignment: Principal 07b0c7d2-2370-4299-a018-0c99d80dcafedoes not exist in the directory cb417fc7-167f-4c45-b909-b5aecd19421c."
+# "New-AzRoleAssignment: Principal 07b0c7d2-2370-4299-a018-0c99d80dcafe does not exist in the directory cb417fc7-167f-4c45-b909-b5aecd19421c."
 #       then you need to wait a bit and re-try.
 New-AzRoleAssignment -ResourceGroupName $resourceGroup.ResourceGroupName -RoleDefinitionName "Storage Account Contributor" -ObjectId $storageDisableShareKeysAssignment.Identity.PrincipalId
 
@@ -154,9 +154,9 @@ Remove-AzPolicyAssignment -Name $denyByLocation -Scope $resourceGroup.ResourceId
 Remove-AzPolicyDefinition -Name $denyByLocation -Force
 
 
-###############################################
-# Private link and Private DNS Zone integration
-###############################################
+#######################################
+# Private DNS Zone integration at scale
+#######################################
 $denyPrivateDNSZoneCreation = "deny-creation-privatednszones"
 
 # Create policy definition
@@ -173,25 +173,82 @@ $denyPrivateDNSZoneCreationAssignment = New-AzPolicyAssignment `
     -Scope $resourceGroup.ResourceId -Location $location
 
 # Try to create new Private DNS Zone
-$privateDNSZoneToCreate = "privatelink.table.core.windows.net"
-New-AzPrivateDnsZone -ResourceGroupName $resourceGroup.ResourceGroupName -Name $privateDNSZoneToCreate
+$privateDNSZoneTable = "privatelink.table.core.windows.net"
+$privateDNSZoneBlob = "privatelink.blob.core.windows.net"
+New-AzPrivateDnsZone -ResourceGroupName $resourceGroup.ResourceGroupName -Name $privateDNSZoneTable
 # -> New-AzPrivateDnsZone: Resource 'privatelink.table.core.windows.net' was disallowed by policy.
-Remove-AzPrivateDnsZone -ResourceGroupName $resourceGroup.ResourceGroupName -Name $privateDNSZoneToCreate
+Remove-AzPrivateDnsZone -ResourceGroupName $resourceGroup.ResourceGroupName -Name $privateDNSZoneTable
 
 # Centralized resource group for Private DNS Zones
 $resourceGroupSharedName = "rg-azurepolicy-shared-demo"
 $resourceGroupShared = New-AzResourceGroup -Name $resourceGroupSharedName -Location $location -Force
 $resourceGroupShared
 
-# Create Private DNS Zone to the centralized shared resource group
-$tablePrivateDnsZone = New-AzPrivateDnsZone -ResourceGroupName $resourceGroupShared.ResourceGroupName -Name $privateDNSZoneToCreate
-$tablePrivateDnsZone
+# Create Private DNS Zones to the centralized shared resource group
+$tablePrivateDnsZone = New-AzPrivateDnsZone -ResourceGroupName $resourceGroupShared.ResourceGroupName -Name $privateDNSZoneTable
 $tablePrivateDnsZone.ResourceId
+$blobPrivateDnsZone = New-AzPrivateDnsZone -ResourceGroupName $resourceGroupShared.ResourceGroupName -Name $privateDNSZoneBlob
+$blobPrivateDnsZone.ResourceId
 
-$tableStorage = "tablestor00000010"
-New-AzStorageAccount -ResourceGroupName $resourceGroup.ResourceGroupName -Name $tableStorage -SkuName Standard_LRS -Location $location
+# If we want to dynamically fill in the resource id of Private DNS Zone of 'table'
+$json = ConvertFrom-Json (Get-Content -Path .\private-link-and-dns-integration\deploy-private-endpoint-to-privatednszone.parameters.json -Raw)
+
+# Update map of "groupIds" to "Private DNS Zone"
+$json.parameters.map.value.table = $tablePrivateDnsZone.ResourceId
+$json.parameters.map.value.blob = $blobPrivateDnsZone.ResourceId
+
+# Update out template file
+ConvertTo-Json -Depth 100 -InputObject $json | Set-Content -Path .\private-link-and-dns-integration\deploy-private-endpoint-to-privatednszone.parameters.json
+
+# Create and deploy policies
+$deployPrivateEndpointToPrivateDNSZone = "deploy-private-endpoint-to-privatednszone"
+
+# Create policy definition
+$deployPrivateEndpointToPrivateDNSZoneDefinition = New-AzPolicyDefinition `
+    -Name $deployPrivateEndpointToPrivateDNSZone `
+    -Policy .\private-link-and-dns-integration\deploy-private-endpoint-to-privatednszone.json `
+    -Parameter .\private-link-and-dns-integration\deploy-private-endpoint-to-privatednszone.parameters.json `
+    -Verbose
+$deployPrivateEndpointToPrivateDNSZoneDefinition
+
+# Create policy assignment to resource group
+$deployPrivateEndpointToPrivateDNSZoneAssignment = New-AzPolicyAssignment `
+    -Name $deployPrivateEndpointToPrivateDNSZone `
+    -PolicyDefinition $deployPrivateEndpointToPrivateDNSZoneDefinition `
+    -Scope $resourceGroup.ResourceId -AssignIdentity -Location $location
+
+# https://docs.microsoft.com/en-us/azure/role-based-access-control/built-in-roles
+# Note: If this below fails:
+# "New-AzRoleAssignment: Principal 07b0c7d2-2370-4299-a018-0c99d80dcafe does not exist in the directory cb417fc7-167f-4c45-b909-b5aecd19421c."
+#       then you need to wait a bit and re-try.
+New-AzRoleAssignment -ResourceGroupName $resourceGroup.ResourceGroupName -RoleDefinitionName "Network Contributor" -ObjectId $deployPrivateEndpointToPrivateDNSZoneAssignment.Identity.PrincipalId
+New-AzRoleAssignment -ResourceGroupName $resourceGroupShared.ResourceGroupName -RoleDefinitionName "Private DNS Zone Contributor" -ObjectId $deployPrivateEndpointToPrivateDNSZoneAssignment.Identity.PrincipalId
+
+# Create virtual network
+$subnet = New-AzVirtualNetworkSubnetConfig -Name "subnet1" -AddressPrefix "172.19.0.0/24" -PrivateEndpointNetworkPoliciesFlag "disabled" -PrivateLinkServiceNetworkPoliciesFlag "disabled"
+$vnet = New-AzVirtualNetwork -Name "vnet" -ResourceGroupName $resourceGroup.ResourceGroupName -Location $location -AddressPrefix "172.19.0.0/16" -Subnet $subnet
+$subnet = Get-AzVirtualNetworkSubnetConfig -Name "subnet1" -VirtualNetwork $vnet
+
+# Create storage account
+$storageForPEs = "storpolicy00000010"
+$storageAccountForPEs = New-AzStorageAccount -ResourceGroupName $resourceGroup.ResourceGroupName -Name $storageForPEs -SkuName Standard_LRS -Location $location
+
+# Create private endpoint for table
+$connectionTable = New-AzPrivateLinkServiceConnection -Name "$tableStorage-connection" -PrivateLinkServiceId $storageAccountForPEs.Id -GroupId "table"
+$peTable = New-AzPrivateEndpoint -Name "pe-table" -ResourceGroupName $resourceGroup.ResourceGroupName -Location $location -Subnet $subnet -PrivateLinkServiceConnection $connectionTable
+
+# Create private endpoint for blob
+$connectionBlob = New-AzPrivateLinkServiceConnection -Name "$tableStorage-connection" -PrivateLinkServiceId $storageAccountForPEs.Id -GroupId "blob"
+$peBlob = New-AzPrivateEndpoint -Name "pe-blob" -ResourceGroupName $resourceGroup.ResourceGroupName -Location $location -Subnet $subnet -PrivateLinkServiceConnection $connectionBlob
+
+# Remove private endpoint
+Remove-AzPrivateEndpoint -Name "pe-table" -ResourceGroupName $resourceGroup.ResourceGroupName -Force
+Remove-AzPrivateEndpoint -Name "pe-blob" -ResourceGroupName $resourceGroup.ResourceGroupName -Force
 
 # Wipe out the Private DNS Zone related policy resources
+Remove-AzPolicyAssignment -Name $deployPrivateEndpointToPrivateDNSZone -Scope $resourceGroup.ResourceId
+Remove-AzPolicyDefinition -Name $deployPrivateEndpointToPrivateDNSZone -Force
+
 Remove-AzPolicyAssignment -Name $denyPrivateDNSZoneCreation -Scope $resourceGroup.ResourceId
 Remove-AzPolicyDefinition -Name $denyPrivateDNSZoneCreation -Force
 
