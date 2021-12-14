@@ -4,7 +4,7 @@
 # https://docs.microsoft.com/en-us/azure/governance/policy/concepts/effects#deployifnotexists-evaluation
 
 # Variables
-$resourceGroup = "rg-azurepolicy-demo"
+$resourceGroupName = "rg-azurepolicy-demo"
 $location = "westeurope"
 
 # Login to Azure
@@ -24,7 +24,7 @@ Get-AzPolicyAlias | Select-Object -ExpandProperty "Aliases" | Where-Object { $_.
 (Get-AzPolicyAlias -NamespaceMatch "Microsoft.Web" -ResourceTypeMatch "sites").Aliases | Format-Table
 
 # Create new resource group
-$resourceGroup = New-AzResourceGroup -Name $resourceGroup -Location $location -Force
+$resourceGroup = New-AzResourceGroup -Name $resourceGroupName -Location $location -Force
 $resourceGroup
 
 # Note: You can trigger a policy compliance evaluation using this command
@@ -152,6 +152,51 @@ Remove-AzStorageAccount -ResourceGroupName $resourceGroup.ResourceGroupName -Nam
 # Wipe out the storage related policy resources
 Remove-AzPolicyAssignment -Name $denyByLocation -Scope $resourceGroup.ResourceId
 Remove-AzPolicyDefinition -Name $denyByLocation -Force
+
+
+###############################################
+# Private link and Private DNS Zone integration
+###############################################
+$denyPrivateDNSZoneCreation = "deny-creation-privatednszones"
+
+# Create policy definition
+$denyPrivateDNSZoneCreationDefinition = New-AzPolicyDefinition `
+    -Name $denyPrivateDNSZoneCreation `
+    -Policy .\private-link-and-dns-integration\deny-privatednszone-privatelink.json `
+    -Verbose
+$denyPrivateDNSZoneCreationDefinition
+
+# Create policy assignment to resource group
+$denyPrivateDNSZoneCreationAssignment = New-AzPolicyAssignment `
+    -Name $denyPrivateDNSZoneCreation `
+    -PolicyDefinition $denyPrivateDNSZoneCreationDefinition `
+    -Scope $resourceGroup.ResourceId -Location $location
+
+# Try to create new Private DNS Zone
+$privateDNSZoneToCreate = "privatelink.table.core.windows.net"
+New-AzPrivateDnsZone -ResourceGroupName $resourceGroup.ResourceGroupName -Name $privateDNSZoneToCreate
+# -> New-AzPrivateDnsZone: Resource 'privatelink.table.core.windows.net' was disallowed by policy.
+Remove-AzPrivateDnsZone -ResourceGroupName $resourceGroup.ResourceGroupName -Name $privateDNSZoneToCreate
+
+# Centralized resource group for Private DNS Zones
+$resourceGroupSharedName = "rg-azurepolicy-shared-demo"
+$resourceGroupShared = New-AzResourceGroup -Name $resourceGroupSharedName -Location $location -Force
+$resourceGroupShared
+
+# Create Private DNS Zone to the centralized shared resource group
+$tablePrivateDnsZone = New-AzPrivateDnsZone -ResourceGroupName $resourceGroupShared.ResourceGroupName -Name $privateDNSZoneToCreate
+$tablePrivateDnsZone
+$tablePrivateDnsZone.ResourceId
+
+$tableStorage = "tablestor00000010"
+New-AzStorageAccount -ResourceGroupName $resourceGroup.ResourceGroupName -Name $tableStorage -SkuName Standard_LRS -Location $location
+
+# Wipe out the Private DNS Zone related policy resources
+Remove-AzPolicyAssignment -Name $denyPrivateDNSZoneCreation -Scope $resourceGroup.ResourceId
+Remove-AzPolicyDefinition -Name $denyPrivateDNSZoneCreation -Force
+
+# Wipe out storage account
+Remove-AzStorageAccount -ResourceGroupName $resourceGroup.ResourceGroupName -Name $tableStorage -Force
 
 # Wipe out the resources
 Remove-AzResourceGroup -Name $resourceGroup.ResourceGroupName -Force

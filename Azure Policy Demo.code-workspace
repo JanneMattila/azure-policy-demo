@@ -9,7 +9,8 @@
 		"recommendations": [
 			"azurepolicy.azurepolicyextension",
 			"ms-vscode.powershell",
-			"msazurermtools.azurerm-vscode-tools"
+			"msazurermtools.azurerm-vscode-tools",
+			"ms-azuretools.vscode-bicep"
 		]
 	}
 }

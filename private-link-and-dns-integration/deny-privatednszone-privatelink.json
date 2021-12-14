@@ -1,0 +1,29 @@
+{
+    "properties": {
+        "displayName": "Deny Creation of Private DNS Zones",
+        "description": "This policy restricts creation of private DNS zones with the `privatelink` prefix",
+        "mode": "All",
+        "metadata": {
+            "version": "1.0.0",
+            "category": "Custom"
+        },
+        "parameters": {},
+        "policyRule": {
+            "if": {
+                "allOf": [
+                    {
+                        "field": "type",
+                        "equals": "Microsoft.Network/privateDnsZones"
+                    },
+                    {
+                        "field": "name",
+                        "contains": "privatelink."
+                    }
+                ]
+            },
+            "then": {
+                "effect": "Deny"
+            }
+        }
+    }
+}
