@@ -1,12 +1,4 @@
 {
-  "parameters": {
-    "map": {
-      "type": "object",
-      "metadata": {
-        "displayName": "privateDnsZoneMap"
-      }
-    }
-  },
   "properties": {
     "displayName": "Deploy IP to Private DNS Zone",
     "description": "This policy deploys Private Endpoint IP to Centralized Private DNS Zone",
@@ -16,7 +8,14 @@
       "version": "1.0.0",
       "category": "Custom"
     },
-    "parameters": {},
+    "parameters": {
+      "map": {
+        "type": "object",
+        "metadata": {
+          "displayName": "privateDnsZoneMap"
+        }
+      }
+    },
     "policyRule": {
       "if": {
         "allOf": [
@@ -93,7 +92,7 @@
                   "value": "[field('location')]"
                 },
                 "type": {
-                  "value": "[field('Microsoft.Network/privateEndpoints/privateLinkServiceConnections[*].groupIds[*]')]"
+                  "value": "[first(field('Microsoft.Network/privateEndpoints/privateLinkServiceConnections[*].groupIds[*]'))]"
                 },
                 "map": {
                   "value": "[parameters('map')]"
