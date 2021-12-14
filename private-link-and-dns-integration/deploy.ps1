@@ -1,13 +1,13 @@
 #######################################
 # Private DNS Zone integration at scale
 #######################################
-# Variables
 # Application team's resource group
 $resourceGroupName = "rg-azurepolicy-app-demo"
-# Centralized resource group for Private DNS Zones
+# Centralized platform resource group for Private DNS Zones
 $resourceGroupSharedName = "rg-azurepolicy-platform-demo"
 $location = "westeurope"
 
+# This examples now uses 'table' and 'blob' privatelinks
 $privateDNSZoneTable = "privatelink.table.core.windows.net"
 $privateDNSZoneBlob = "privatelink.blob.core.windows.net"
 
@@ -24,7 +24,7 @@ Get-AzSubscription
 $resourceGroup = New-AzResourceGroup -Name $resourceGroupName -Location $location -Force
 $resourceGroup
 
-# Centralized resource group for Private DNS Zones
+# Centralized platform resource group for Private DNS Zones
 $resourceGroupShared = New-AzResourceGroup -Name $resourceGroupSharedName -Location $location -Force
 $resourceGroupShared
 
@@ -67,14 +67,15 @@ $blobPrivateDnsZone.ResourceId
 $json = ConvertFrom-Json (Get-Content -Path .\private-link-and-dns-integration\deploy-private-endpoint-to-privatednszone.parameters.json -Raw)
 
 # Update map of "groupIds" to "Private DNS Zone"
-$json.parameters.map.value.table = $tablePrivateDnsZone.ResourceId
-$json.parameters.map.value.blob = $blobPrivateDnsZone.ResourceId
+$json.map.defaultValue.table = $tablePrivateDnsZone.ResourceId
+$json.map.defaultValue.blob = $blobPrivateDnsZone.ResourceId
 
 # Update our template file
 ConvertTo-Json -Depth 100 -InputObject $json | Set-Content -Path .\private-link-and-dns-integration\deploy-private-endpoint-to-privatednszone.parameters.json
 Get-Content .\private-link-and-dns-integration\deploy-private-endpoint-to-privatednszone.parameters.json
 
-# Create and deploy policies
+# Create and deploy policies to automatically update 
+# centralized platform Private DNS Zones when private endpoints are created
 $deployPrivateEndpointToPrivateDNSZone = "deploy-private-endpoint-to-privatednszone"
 
 # Create policy definition
@@ -100,17 +101,19 @@ New-AzRoleAssignment -ResourceGroupName $resourceGroupShared.ResourceGroupName -
 
 # 3. Application teams can now continue working.
 
-##############################
+########################################
 #     _    ____  ____
 #    / \  |  _ \|  _ \
 #   / _ \ | |_) | |_) |
 #  / ___ \|  __/|  __/
 # /_/   \_\_|   |_|
 # team starts using their resource group
-##############################
+########################################
 # Try to create new Private DNS Zone
 New-AzPrivateDnsZone -ResourceGroupName $resourceGroup.ResourceGroupName -Name $privateDNSZoneTable
 # -> New-AzPrivateDnsZone: Resource 'privatelink.table.core.windows.net' was disallowed by policy.
+# Note: You have small time window after above 'deny' policy is created and when it becomes active.
+Remove-AzPrivateDnsZone -ResourceGroupName $resourceGroup.ResourceGroupName -Name $privateDNSZoneTable
 
 # Create virtual network
 $subnet = New-AzVirtualNetworkSubnetConfig -Name "subnet1" -AddressPrefix "172.19.0.0/24" -PrivateEndpointNetworkPoliciesFlag "disabled" -PrivateLinkServiceNetworkPoliciesFlag "disabled"
@@ -124,15 +127,25 @@ $storageAccountForPEs = New-AzStorageAccount -ResourceGroupName $resourceGroup.R
 # Create private endpoint for table
 $connectionTable = New-AzPrivateLinkServiceConnection -Name "$tableStorage-connection" -PrivateLinkServiceId $storageAccountForPEs.Id -GroupId "table"
 $peTable = New-AzPrivateEndpoint -Name "pe-table" -ResourceGroupName $resourceGroup.ResourceGroupName -Location $location -Subnet $subnet -PrivateLinkServiceConnection $connectionTable
+$peTable
 
 # Create private endpoint for blob
 $connectionBlob = New-AzPrivateLinkServiceConnection -Name "$tableStorage-connection" -PrivateLinkServiceId $storageAccountForPEs.Id -GroupId "blob"
 $peBlob = New-AzPrivateEndpoint -Name "pe-blob" -ResourceGroupName $resourceGroup.ResourceGroupName -Location $location -Subnet $subnet -PrivateLinkServiceConnection $connectionBlob
+$peBlob
 
 # Create a remediation for a specific assignment
 $remediation = Start-AzPolicyRemediation -Name "pe-remediation" -PolicyAssignmentId $deployPrivateEndpointToPrivateDNSZoneAssignment.ResourceId -Scope $resourceGroup.ResourceId
+$remediation
 
-################################################
+###################################
+#   ____ _     _____    _    _   _
+#  / ___| |   | ____|  / \  | \ | |
+# | |   | |   |  _|   / _ \ |  \| |
+# | |___| |___| |___ / ___ \| |\  |
+#  \____|_____|_____/_/   \_\_| \_|
+# your resources
+###################################
 
 # Remove private endpoint
 Remove-AzPrivateEndpoint -Name "pe-table" -ResourceGroupName $resourceGroup.ResourceGroupName -Force
