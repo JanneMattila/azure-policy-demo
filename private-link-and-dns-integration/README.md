@@ -10,6 +10,12 @@ all required services including `table_secondary` and `blob_secondary`.
 Full list available at
 [Azure Private Endpoint DNS configuration](https://docs.microsoft.com/en-us/azure/private-link/private-endpoint-dns#azure-services-dns-zone-configuration)
 
+Notes:
+
+- If you manually remove record from Private DNS Zone, private endpoints are not reflected with that change
+- If you manually remove DNS entry from private endpoint resource, Private DNS Zone is not reflected with that change
+- If you create multiple private endpoints for same resource, last private endpoint IP is update to Private DNS Zone
+
 ## Links
 
 [Azure Policy Field expressions](https://docs.microsoft.com/en-us/azure/governance/policy/concepts/definition-structure#fields)
