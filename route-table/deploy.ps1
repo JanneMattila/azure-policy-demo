@@ -56,9 +56,6 @@ $routeTable = New-AzRouteTable `
     -ResourceGroupName $resourceGroupName `
     -Location $location -Route $route1, $route2, $route3, $route4
 
-# Delete route table
-Remove-AzRouteTable -Name $routeName1 -ResourceGroupName $resourceGroupName -Force
-
 ###################################
 #   ____ _     _____    _    _   _
 #  / ___| |   | ____|  / \  | \ | |
@@ -69,6 +66,7 @@ Remove-AzRouteTable -Name $routeName1 -ResourceGroupName $resourceGroupName -For
 ###################################
 
 # Remove route table
+Remove-AzRouteTable -Name $routeName1 -ResourceGroupName $resourceGroupName -Force
 
 # Wipe out the policy resources
 Remove-AzPolicyAssignment -Name $auditRouteTables -Scope $resourceGroup.ResourceId
