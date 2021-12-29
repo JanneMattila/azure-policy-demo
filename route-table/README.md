@@ -20,13 +20,15 @@ Example deploys 3 route tables:
 
 ![deployed route tables in Azure Portal](https://user-images.githubusercontent.com/2357647/147682356-6099fb5e-fea7-4542-8543-63ed26bb6d65.png)
 
-- `App-Valid-important-rt` is evaluted by policy and is `compliant`
-- `App-Ignored-rt` is not evaluated since name does not match the required naming
-- `App-Invalid-important-rt` is evaluated but does not contain mandatory routes and is `non-compliant`
+- `App-Valid-important-rt` is evaluted by policy and is marked as `compliant`
+- `App-Ignored-rt` is not evaluated since name does not match the naming convention
+- `App-Invalid-important-rt` is evaluated but does not contain mandatory routes and is marked as `non-compliant`
 
 Here is example resource which is `non-compliant`:
 
 ![non-compliant route table](https://user-images.githubusercontent.com/2357647/147681596-5be90feb-81de-4b75-b3c6-dd5240c38a06.png)
+
+`Details` reveals the actual reason for beeing `non-compliant`:
 
 ![route table non-compliant error since missing mandatory routes](https://user-images.githubusercontent.com/2357647/147681974-77224779-db91-4f3d-8a07-d6350f4e411f.png)
 
