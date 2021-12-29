@@ -16,7 +16,29 @@ Azure Policy logic:
 
 If all the above conditions are met, then policy causes `Audit` event.
 
-Example deploys 3 route tables:
+Here is example of mandatory routes configuration:
+
+```json
+[
+  {
+    "addressPrefix": "0.0.0.0/0",
+    "nextHopType": "VirtualAppliance",
+    "nextHopIpAddress": "10.20.30.40"
+  },
+  {
+    "addressPrefix": "1.2.0.0/21",
+    "nextHopType": "VirtualAppliance",
+    "nextHopIpAddress": "10.20.30.40"
+  },
+  {
+    "addressPrefix": "11.22.33.0/25",
+    "nextHopType": "VirtualAppliance",
+    "nextHopIpAddress": "10.20.30.40"
+  }
+]
+```
+
+This example deploys 3 route tables:
 
 ![deployed route tables in Azure Portal](https://user-images.githubusercontent.com/2357647/147682356-6099fb5e-fea7-4542-8543-63ed26bb6d65.png)
 
