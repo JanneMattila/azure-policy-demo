@@ -16,11 +16,11 @@
         },
         "defaultValue": "*important-rt"
       },
-      "reservedRoutes": {
+      "mandatoryRoutes": {
         "type": "array",
         "metadata": {
-          "description": "Array of reserved routes configurations, that have to exist in defined route table",
-          "displayName": "Array of reserved routes"
+          "description": "Array of mandatory route configurations, that have to exist in defined route table",
+          "displayName": "Array of mandatory routes"
         },
         "defaultValue": [
           {
@@ -54,8 +54,8 @@
           },
           {
             "count": {
-              "value": "[parameters('reservedRoutes')]",
-              "name": "reservedRoute",
+              "value": "[parameters('mandatoryRoutes')]",
+              "name": "mandatoryRoute",
               "where": {
                 "count": {
                   "field": "Microsoft.Network/routeTables/routes[*]",
@@ -63,15 +63,15 @@
                     "allOf": [
                       {
                         "field": "Microsoft.Network/routeTables/routes[*].addressPrefix",
-                        "equals": "[current('reservedRoute').addressPrefix]"
+                        "equals": "[current('mandatoryRoute').addressPrefix]"
                       },
                       {
                         "field": "Microsoft.Network/routeTables/routes[*].nextHopType",
-                        "equals": "[current('reservedRoute').nextHopType]"
+                        "equals": "[current('mandatoryRoute').nextHopType]"
                       },
                       {
                         "field": "Microsoft.Network/routeTables/routes[*].nextHopIpAddress",
-                        "equals": "[current('reservedRoute').nextHopIpAddress]"
+                        "equals": "[current('mandatoryRoute').nextHopIpAddress]"
                       }
                     ]
                   }
