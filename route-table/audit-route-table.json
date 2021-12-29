@@ -8,13 +8,13 @@
       "category": "Custom"
     },
     "parameters": {
-      "routeTableNameContains": {
+      "routeTableNameMatchingCriteria": {
         "type": "string",
         "metadata": {
-          "description": "Route table name must contain this value in order to be evaluated",
-          "displayName": "Route table name contains"
+          "description": "Route table name must match to this value in order to be evaluated. '*' is supported.",
+          "displayName": "Route table name matching criteria"
         },
-        "defaultValue": "important-rt"
+        "defaultValue": "*important-rt"
       },
       "reservedRoutes": {
         "type": "array",
@@ -50,12 +50,12 @@
           },
           {
             "field": "name",
-            "contains": "[parameters('routeTableNameContains')]"
+            "like": "[parameters('routeTableNameMatchingCriteria')]"
           },
           {
             "count": {
               "value": "[parameters('reservedRoutes')]",
-              "name": "reservedRoutes",
+              "name": "reservedRoute",
               "where": {
                 "count": {
                   "field": "Microsoft.Network/routeTables/routes[*]",
@@ -63,15 +63,15 @@
                     "allOf": [
                       {
                         "field": "Microsoft.Network/routeTables/routes[*].addressPrefix",
-                        "equals": "[current('reservedRoutes').addressPrefix]"
+                        "equals": "[current('reservedRoute').addressPrefix]"
                       },
                       {
                         "field": "Microsoft.Network/routeTables/routes[*].nextHopType",
-                        "equals": "[current('reservedRoutes').nextHopType]"
+                        "equals": "[current('reservedRoute').nextHopType]"
                       },
                       {
                         "field": "Microsoft.Network/routeTables/routes[*].nextHopIpAddress",
-                        "equals": "[current('reservedRoutes').nextHopIpAddress]"
+                        "equals": "[current('reservedRoute').nextHopIpAddress]"
                       }
                     ]
                   }
@@ -79,7 +79,7 @@
                 "equals": 1
               }
             },
-            "equals": "[length(parameters('reservedRoutes'))]"
+            "less": "[length(parameters('reservedRoutes'))]"
           }
         ]
       },
