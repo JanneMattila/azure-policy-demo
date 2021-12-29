@@ -1,0 +1,91 @@
+{
+  "properties": {
+    "displayName": "Audit route table configuration",
+    "description": "This policy audits route table configuration to have mandatory routes",
+    "mode": "All",
+    "metadata": {
+      "version": "1.0.0",
+      "category": "Custom"
+    },
+    "parameters": {
+      "routeTableNameContains": {
+        "type": "string",
+        "metadata": {
+          "description": "Route table name must contain this value in order to be evaluated",
+          "displayName": "Route table name contains"
+        },
+        "defaultValue": "important-rt"
+      },
+      "reservedRoutes": {
+        "type": "array",
+        "metadata": {
+          "description": "Array of reserved routes configurations, that have to exist in defined route table",
+          "displayName": "Array of reserved routes"
+        },
+        "defaultValue": [
+          {
+            "addressPrefix": "0.0.0.0/0",
+            "nextHopType": "VirtualAppliance",
+            "nextHopIpAddress": "10.20.30.40"
+          },
+          {
+            "addressPrefix": "1.2.0.0/21",
+            "nextHopType": "VirtualAppliance",
+            "nextHopIpAddress": "10.20.30.40"
+          },
+          {
+            "addressPrefix": "11.22.33.0/25",
+            "nextHopType": "VirtualAppliance",
+            "nextHopIpAddress": "10.20.30.40"
+          }
+        ]
+      }
+    },
+    "policyRule": {
+      "if": {
+        "allOf": [
+          {
+            "field": "type",
+            "equals": "Microsoft.Network/routeTables"
+          },
+          {
+            "field": "name",
+            "contains": "[parameters('routeTableNameContains')]"
+          },
+          {
+            "count": {
+              "value": "[parameters('reservedRoutes')]",
+              "name": "reservedRoutes",
+              "where": {
+                "count": {
+                  "field": "Microsoft.Network/routeTables/routes[*]",
+                  "where": {
+                    "allOf": [
+                      {
+                        "field": "Microsoft.Network/routeTables/routes[*].addressPrefix",
+                        "equals": "[current('reservedRoutes').addressPrefix]"
+                      },
+                      {
+                        "field": "Microsoft.Network/routeTables/routes[*].nextHopType",
+                        "equals": "[current('reservedRoutes').nextHopType]"
+                      },
+                      {
+                        "field": "Microsoft.Network/routeTables/routes[*].nextHopIpAddress",
+                        "equals": "[current('reservedRoutes').nextHopIpAddress]"
+                      }
+                    ]
+                  }
+                },
+                "equals": 1
+              }
+            },
+            "equals": "[length(parameters('reservedRoutes'))]"
+          }
+        ]
+      },
+      "then": {
+        "effect": "Audit"
+      }
+    }
+  }
+}
