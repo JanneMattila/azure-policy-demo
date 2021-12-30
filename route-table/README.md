@@ -1,20 +1,23 @@
-# Mandatory route tables example
+# Mandatory route example
 
 ![Routing table policy view](https://user-images.githubusercontent.com/2357647/147681206-4fdafc63-81ed-4f55-9079-8a366f675cc6.png)
 
-This example validates that mandatory routes are part of the route table.
+This example Azure Policy audits that mandatory routes are part of the route table.
 
-Follow step-by-step instructions from [deploy.ps1](deploy.ps1).
+Follow step-by-step deployment instructions from [deploy.ps1](deploy.ps1).
 
-Azure Policy logic:
+Implemented Azure Policy logic:
 
 - Filter on type `RouteTables`
 - Filter on specific route tables based on naming convention e.g., `*important-rt`
   - You want to apply this to specific `RouteTable` and not all
+  - You can use `*` to provide `like` type of match e.g., `*name` matches `my-name`
 - Validate that all defined rules are found
-  - You define your mandatory `Routes` and check if some of the routes are missing
+  - You define your mandatory `Routes` and check if some of the routes are missing. 
+    E.g., You have 3 mandatory routes so if you find less than 3 mandatory routes
+    in your route table then that is incorrectly managed route table
 
-If all the above conditions are met, then policy causes `Audit` event.
+If all the above conditions are in-place, then policy causes `Audit` event.
 
 Here is example of mandatory routes configuration:
 
