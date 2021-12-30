@@ -1,4 +1,4 @@
-# Mandatory route example
+# Mandatory routes Azure Policy example
 
 ![Routing table policy view](https://user-images.githubusercontent.com/2357647/147681206-4fdafc63-81ed-4f55-9079-8a366f675cc6.png)
 
