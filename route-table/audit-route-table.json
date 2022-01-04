@@ -79,7 +79,7 @@
                 "equals": 1
               }
             },
-            "less": "[length(parameters('reservedRoutes'))]"
+            "less": "[length(parameters('mandatoryRoutes'))]"
           }
         ]
       },
