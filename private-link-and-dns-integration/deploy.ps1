@@ -90,7 +90,7 @@ $deployPrivateEndpointToPrivateDNSZoneDefinition
 $deployPrivateEndpointToPrivateDNSZoneAssignment = New-AzPolicyAssignment `
     -Name $deployPrivateEndpointToPrivateDNSZone `
     -PolicyDefinition $deployPrivateEndpointToPrivateDNSZoneDefinition `
-    -Scope $resourceGroup.ResourceId -AssignIdentity -Location $location
+    -Scope $resourceGroup.ResourceId -IdentityType SystemAssigned -Location $location
 
 # https://docs.microsoft.com/en-us/azure/role-based-access-control/built-in-roles
 # Note: If this below fails:
