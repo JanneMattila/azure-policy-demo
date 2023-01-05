@@ -11,7 +11,7 @@ $location = "westeurope"
 Login-AzAccount
 
 # *Explicitly* select your working context
-Select-AzSubscription -Subscription AzureDev
+Select-AzSubscription -Subscription "development"
 
 # Show current context
 Get-AzSubscription

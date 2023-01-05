@@ -1,0 +1,38 @@
+{
+  "properties": {
+    "displayName": "[Manual]: Minimize the number of admins",
+    "description": "Each additional person in the Owner and Contributor roles increases the attack surface for the entire subscription. The number of members in these roles should be kept to as low as possible.",
+    "mode": "All",
+    "metadata": {
+      "version": "1.0.0",
+      "category": "Custom"
+    },
+    "parameters": {
+      "defaultState": {
+        "type": "String",
+        "metadata": {
+          "displayName": "DefaultState",
+          "description": "Default state"
+        },
+        "allowedValues": [
+          "Compliant",
+          "NonCompliant",
+          "Unknown"
+        ],
+        "defaultValue": "NonCompliant"
+      }
+    },
+    "policyRule": {
+      "if": {
+        "field": "type",
+        "equals": "Microsoft.Resources/subscriptions"
+      },
+      "then": {
+        "effect": "Manual",
+        "details": {
+          "defaultState": "[parameters('defaultState')]"
+        }
+      }
+    }
+  }
+}
