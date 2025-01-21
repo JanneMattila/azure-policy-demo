@@ -5,18 +5,18 @@
 
 # Variables
 $resourceGroupName = "rg-azurepolicy-demo"
-$location = "westeurope"
+$location = "swedencentral"
 
 # Login to Azure
 Login-AzAccount
 
 # *Explicitly* select your working context
-Select-AzSubscription -Subscription "development"
+Select-AzSubscription -Subscription "sandbox"
 
 # Show current context
-Get-AzSubscription
+Get-AzContext
 
-# Aliases: https://docs.microsoft.com/en-us/azure/governance/policy/concepts/definition-structure#aliases
+# Aliases: https://learn.microsoft.com/en-us/azure/governance/policy/concepts/definition-structure-basics#aliases
 # See aliases that support "modify"
 Get-AzPolicyAlias | Select-Object -ExpandProperty "Aliases" | Where-Object { $_.DefaultMetadata.Attributes -eq "Modifiable" } | Format-Table
 
@@ -45,23 +45,33 @@ $funcAppIPRestrictionsDefinition = New-AzPolicyDefinition `
 $funcAppIPRestrictionsDefinition
 
 # Create policy assignment to resource group
+$policyParameters = @{"allowedIPAddresses" = @(
+        @{
+            action    = "Allow";
+            ipAddress = "11.22.33.44/32";
+            name      = "Allowed app";
+            priority  = 100;
+        }
+    ) 
+}
 $funcAppIPRestrictionsAssignment = New-AzPolicyAssignment `
     -Name $funcAppIPRestrictions `
     -PolicyDefinition $funcAppIPRestrictionsDefinition `
-    -Scope $resourceGroup.ResourceId -AssignIdentity -Location $location
+    -PolicyParameterObject $policyParameters `
+    -Scope $resourceGroup.ResourceId -IdentityType SystemAssigned -Location $location
 
 # https://docs.microsoft.com/en-us/azure/role-based-access-control/built-in-roles#website-contributor
 # $funcAppIPRestrictionsDefinition.Properties.policyRule.then.details.roleDefinitionIds[0]
 # Note: If this below fails:
 # "New-AzRoleAssignment: Principal 07b0c7d2-2370-4299-a018-0c99d80dcafedoes not exist in the directory cb417fc7-167f-4c45-b909-b5aecd19421c."
 #       then you need to wait a bit and re-try.
-New-AzRoleAssignment -ResourceGroupName $resourceGroup.ResourceGroupName -RoleDefinitionName "Website Contributor" -ObjectId $funcAppIPRestrictionsAssignment.Identity.PrincipalId
+New-AzRoleAssignment -ResourceGroupName $resourceGroup.ResourceGroupName -RoleDefinitionName "Website Contributor" -ObjectId $funcAppIPRestrictionsAssignment.IdentityPrincipalId
 
 # Create Azure Functions App
 $funcStorage = "funcapps00000010"
 $funcApp = "funcapps00000010"
 New-AzStorageAccount -ResourceGroupName $resourceGroup.ResourceGroupName -Name $funcStorage -SkuName Standard_LRS -Location $location
-New-AzFunctionApp -Name $funcApp -ResourceGroupName $resourceGroup.ResourceGroupName -StorageAccount $funcStorage -Runtime DotNet -RuntimeVersion 3 -FunctionsVersion 3 -OSType Windows -DisableApplicationInsights -Location $location
+New-AzFunctionApp -Name $funcApp -ResourceGroupName $resourceGroup.ResourceGroupName -StorageAccount $funcStorage -Runtime DotNet -RuntimeVersion 8 -FunctionsVersion 4 -OSType Windows -DisableApplicationInsights -Location $location
 
 # Delete Functions App (in case you want to re-run the deployments)
 Remove-AzFunctionApp -Name $funcApp -ResourceGroupName $resourceGroup.ResourceGroupName -Force
@@ -89,14 +99,14 @@ $storageDisableSharedKeysDefinition
 $storageDisableShareKeysAssignment = New-AzPolicyAssignment `
     -Name $storageDisableSharedKeys `
     -PolicyDefinition $storageDisableSharedKeysDefinition `
-    -Scope $resourceGroup.ResourceId -AssignIdentity -Location $location
+    -Scope $resourceGroup.ResourceId -IdentityType SystemAssigned -Location $location
 
 # https://docs.microsoft.com/en-us/azure/role-based-access-control/built-in-roles#storage-account-contributor
 # $storageDisableShareKeysAssignment.Properties.policyRule.then.details.roleDefinitionIds[0]
 # Note: If this below fails:
 # "New-AzRoleAssignment: Principal 07b0c7d2-2370-4299-a018-0c99d80dcafe does not exist in the directory cb417fc7-167f-4c45-b909-b5aecd19421c."
 #       then you need to wait a bit and re-try.
-New-AzRoleAssignment -ResourceGroupName $resourceGroup.ResourceGroupName -RoleDefinitionName "Storage Account Contributor" -ObjectId $storageDisableShareKeysAssignment.Identity.PrincipalId
+New-AzRoleAssignment -ResourceGroupName $resourceGroup.ResourceGroupName -RoleDefinitionName "Storage Account Contributor" -ObjectId $storageDisableShareKeysAssignment.IdentityPrincipalId
 
 # Create Azure Storage Account
 $storage = "storageapps00000010"
